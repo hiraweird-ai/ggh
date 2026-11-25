@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Квест: Прощение</title>
+<style>
+:root{--bg:#f3e6c8;--card:#fff8e6;--ink:#3b2a1a;--acc:#c0392b;--acc2:#e8a317;--line:#3b2a1a;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101a33;--card:#1b2a4d;--ink:#f1e7d0;--acc:#ff6b57;--acc2:#f5c04a;--line:#f1e7d0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101a33;--card:#1b2a4d;--ink:#f1e7d0;--acc:#ff6b57;--acc2:#f5c04a;--line:#f1e7d0;color-scheme:dark}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.5;display:flex;justify-content:center;padding:16px}
+main{width:100%;max-width:520px}
+.poster{border:3px solid var(--line);background:var(--card);border-radius:10px;padding:18px;text-align:center;box-shadow:4px 4px 0 var(--line)}
+.poster small{letter-spacing:.3em;font-size:12px}
+h1{margin:6px 0;font-size:30px;color:var(--acc);text-transform:uppercase}
+h2{margin:0 0 8px;font-size:21px}
+.bounty{font-weight:bold;font-size:18px}
+.hp{margin:16px 0 4px;font-size:13px;display:flex;justify-content:space-between}
+.bar{height:16px;border:2px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .8s}
+.card{margin-top:16px;border:3px solid var(--line);background:var(--card);border-radius:10px;padding:18px;box-shadow:4px 4px 0 var(--line);animation:in .4s}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+p{margin:0 0 14px;font-size:17px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;min-height:56px}
+button{font:inherit;font-weight:bold;font-size:16px;padding:12px 18px;border:3px solid var(--line);border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;box-shadow:2px 2px 0 var(--line);transition:transform .25s}
+button.alt{background:var(--card);color:var(--ink)}
+button:active{transform:translate(2px,2px);box-shadow:none}
+.pick{display:block;width:100%;text-align:left;margin-bottom:10px;background:var(--card);color:var(--ink)}
+.pick span{display:block;font-weight:normal;font-size:14px}
+input[type=date]{font:inherit;padding:8px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.sign{text-align:right;font-style:italic}
+.dots{text-align:center;margin-top:14px;font-size:13px;opacity:.8}
+</style>
+</head>
+<body>
+<main>
+  <div class="poster">
+    <small>WANTED</small>
+    <h1>Твоё прощение</h1>
+    <div class="bounty">฿ ∞ — награда за вечер вдвоём</div>
+    <div class="hp"><span>Уровень вины капитана</span><span id="pct">100%</span></div>
+    <div class="bar"><i id="fill"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="dots" id="dots"></div>
+</main>
+<script>
+var NAME = "Жаным";
+var FROM = "Твой Капитан";
+var chapters = [
+  {t:"Глава 1: Признание", p:NAME+", я накосячил. Без «но», без «ты тоже» и без оправданий. Мне правда жаль, что тебе было неприятно из-за меня.", hp:60},
+  {t:"Глава 2: Выводы", p:"Я понял, что именно пошло не так, и в следующий раз сначала подумаю, а потом сделаю. Идеальным быть не обещаю, зато обещаю слышать тебя.", hp:25},
+  {t:"Глава 3: Приглашение", p:"Я приготовил для тебя вечер: плед, что-нибудь вкусное и аниме, которое выберешь ты сама. Принимаешь приглашение в команду?", hp:25, ask:true}
+];
+var shows = [
+  ["Ходячий замок Хаула","Уютно и по-доброму"],
+  ["Твоё имя","Красиво, возможно, со слезами"],
+  ["Ван-Пис, серия 1","Начнём с начала, обещаю не душить спойлерами"],
+  ["Сюрприз от капитана","Выбор я беру на себя"]
+];
+var step = 0, dodges = 0, choice = "";
+var stage = document.getElementById("stage");
+function setHp(v){document.getElementById("fill").style.width=v+"%";document.getElementById("pct").textContent=v+"%"}
+function dots(){document.getElementById("dots").textContent="Квест: "+(step<3?(step+1)+" / 3":"выполнен ✔")}
+function render(){
+  var c = chapters[step];
+  setHp(c.hp); dots();
+  var btns = c.ask
+    ? '<button id="yes">Принять приглашение</button><button class="alt" id="maybe">Подумать ещё</button>'
+    : '<button id="next">Дальше</button>';
+  stage.innerHTML = '<div class="card"><h2>'+c.t+'</h2><p>'+c.p+'</p><div class="row">'+btns+'</div></div>';
+  if(c.ask){
+    document.getElementById("yes").onclick = pickScreen;
+    var m = document.getElementById("maybe");
+    var lines = ["Подумать ещё","Эй, куда?","Не поймаешь","Почти…"];
+    var dodge = function(){
+      if(dodges>=4) return false;
+      dodges++;
+      m.style.transform = "translate("+((Math.random()*120-60)|0)+"px,"+((Math.random()*50-25)|0)+"px)";
+      m.textContent = lines[dodges] || "…";
+      if(dodges>=4){m.textContent="Ладно, согласна 🙈";m.style.transform="none"}
+      return true;
+    };
+    m.onpointerenter = function(){ if(dodges<4) dodge() };
+    m.onclick = function(){ if(dodges<4){dodge()} else {pickScreen()} };
+  } else {
+    document.getElementById("next").onclick = function(){step++;render()};
+  }
+}
+function pickScreen(){
+  step = 3; setHp(10); dots();
+  var h = '<div class="card"><h2>Выбери сюжет вечера</h2><p>Твоё слово — закон на этом корабле.</p>';
+  shows.forEach(function(s,i){h+='<button class="pick" data-i="'+i+'">'+s[0]+'<span>'+s[1]+'</span></button>'});
+  stage.innerHTML = h+'</div>';
+  Array.prototype.forEach.call(stage.querySelectorAll(".pick"),function(b){
+    b.onclick = function(){choice = shows[+b.getAttribute("data-i")][0]; finalScreen()};
+  });
+}
+function finalScreen(){
+  setHp(0); dots();
+  stage.innerHTML = '<div class="card"><h2>Квест принят ✔</h2><p>Вечер: <b>'+choice+'</b>. Осталось выбрать день:</p><div class="row"><input type="date" id="d"></div><p id="out" style="margin-top:14px"></p><p class="sign">'+FROM+'</p><p style="font-size:14px">Сделай скриншот и отправь мне — я всё организую. 🍿</p></div>';
+  document.getElementById("d").onchange = function(){
+    var v=this.value; if(!v) return;
+    var p=v.split("-");
+    document.getElementById("out").textContent = "Договорились: "+p[2]+"."+p[1]+"."+p[0]+", "+choice+".";
+  };
+}
+render();
+</script>
+</body>
+</html>
